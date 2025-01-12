@@ -7,6 +7,7 @@ const upload = require('./routers/upload');
 const fetch = require('./routers/fetch');
 const deleteFile = require('./routers/delete');
 const storage = require('./routers/storage');
+const submit = require('./routers/submit');
 const app = express();
 const corsOptions = {
     origin: "*",
@@ -15,10 +16,11 @@ const router = express.Router();
 app.use(bodyParser.json());
 app.use(cors(corsOptions));
 
-router.use('/upload', upload);
-router.use('/fetch', fetch);
-router.use('/delete', deleteFile);
-router.use('/storage', storage);
+app.use('/upload', upload);
+app.use('/fetch', fetch);
+app.use('/delete', deleteFile);
+app.use('/storage', storage);
+app.use('/submit', submit);
 
 app.use("/.netlify/functions/app", router);
 app.listen("5000", () => {

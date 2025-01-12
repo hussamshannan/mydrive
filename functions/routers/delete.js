@@ -2,7 +2,16 @@ require('dotenv').config();
 
 const express = require('express');
 const { google } = require('googleapis');
+const mysql = require("mysql2/promise");
+const JWTauth = require('../auth/JWTauth')
 
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+});
 const router = express.Router();
 
 // Google Drive API Configuration
@@ -38,16 +47,39 @@ async function deleteFile(authClient, fileId) {
 }
 
 // Delete File Route
-router.delete('/:fileId', async (req, res) => {
+router.delete('/:fileId', JWTauth,async (req, res) => {
     const { fileId } = req.params;
-
     try {
         const authClient = await authorize();
         await deleteFile(authClient, fileId);
-        res.status(200).json({ success: true, message: `File ${fileId} deleted successfully` });
+        await deleteFilesql(fileId);
+        res.status(200).json({ success: true, message: `File deleted successfully!` });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Failed to delete the file." });
     }
 });
+async function deleteFilesql(id) {
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    try {
+        await connection.query(
+            `
+                DELETE FROM files
+                WHERE fileId = ?;
+                `,
+            [
+                id,
+            ]
+        );
+        await connection.commit();
 
+        return true;
+    } catch (error) {
+        await connection.rollback();
+        console.log(error);
+        return false;
+    } finally {
+        connection.release();
+    }
+}
 module.exports = router;
